@@ -1,8 +1,7 @@
 {
-  "name": "luxraj-blog-local-admin",
+  "name": "luxraj-local-cms",
   "private": true,
   "type": "module",
-  "scripts": {
-    "test": "node --test && node --check js/app.js && node --check js/ui/page-id-selector.js && node --check js/ui/pattern-studio.js"
-  }
+  "scripts": { "build": "node scripts/build-site.mjs", "test": "node --test" },
+  "engines": { "node": ">=22" }
 }

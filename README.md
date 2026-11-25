@@ -1,92 +1,40 @@
-# Luxraj Blog Local CMS
+# Luxraj Local CMS
 
-A static, modular CMS for locally checked-out Git repositories. The UI runs over HTTPS or localhost in a desktop Chromium browser with the File System Access API; it does not use GitHub tokens or a backend.
+A lightweight static website shell for independent, trusted HTML applications. No backend, database, authentication, editor, file manager, framework or external runtime dependencies.
 
-## Implemented modules
+## Add an application
 
-### Page Metadata Filler
+Place the complete standalone HTML document in [site/applications/](site/applications/). Nested directories and both .html and .htm are supported. Keep any supporting files alongside the app and use relative asset URLs. Every non-hidden HTML file in this directory is treated as an application. No markers, registry, boilerplate or changes to the shell are required.
 
-1. Select a local Git repository folder. The topbar shows the local branch names and checked-out branch.
-2. Open **Page Metadata Filler**. The first dropdown contains only HTML files with `data-luxraj-seo="true"` on their root `<html>` element (or the configured SEO marker). All eligible pages are checked by default. Uncheck pages and click Done to pass the confirmed selection onward.
-3. Open **Page ID Population**. Only pages passed from the first dropdown are listed. A Page ID meta tag whose content equals `{{PAGE_ID}}` (or the configured placeholder) is eligible for bulk population. Filled IDs appear gray and cannot be bulk-selected, but the pencil button permits deliberate manual editing. Missing/invalid Page ID tags are reported and cannot be silently created.
-4. Choose placeholders, preview generated IDs, then explicitly confirm writing those values into the actual local source HTML files. Only the Page ID meta `content` attribute is updated.
+The next build generates the homepage, sidebar and a dedicated shell page under tools/ for each application. Its display name comes from the HTML title (or a readable filename). The original file and accompanying assets are copied unchanged under applications/. The wrapper loads the original document in an iframe to isolate ordinary CSS and JavaScript namespaces. Remove an HTML file and rebuild to remove its entry and generated wrapper.
 
-The editor validates IDs and checks for duplicate permanent values throughout the connected local HTML tree, including files not selected in the first dropdown. Generated sequences start after the highest permanent value in their numbering group and never recycle earlier gaps. Unknown or overlapping rules prevent bulk writes.
+Apps are trusted, same-origin code; the iframe is not a security sandbox. Do not upload untrusted HTML or secrets. GitHub Pages is public for this repository. An application's external dependencies and browser permission requirements remain its own responsibility. Apps that require a top-level browsing context may need adjustment or can be opened directly at their original applications/ URL.
 
-### Page ID Pattern Studio
+## Build locally
 
-The separate **Page ID Pattern Studio** page displays a collapsible map of HTML files in the selected working tree. It supports:
+Use Node.js 22 or newer. No npm install is required.
 
-- Editing path-based match expressions such as `site/categories/{category}/{topic}/articles/{page}.html`.
-- Editing naming patterns such as `article-{category}-{topic}-{nn}`.
-- Setting numbering start, digit width, increment and scope (topic, category, parent folder, entire rule or custom named capture groups).
-- Adding and removing rules using the selected file/folder as a starting point.
-- Editing SEO marker name, Page ID meta name and placeholder convention.
-- A live, read-only preview with conflict reporting.
-- Saving a profile in IndexedDB **for the connected directory handle**, separately from profiles for other repositories.
-- Exporting/importing a JSON profile to share settings across machines.
+    npm test
+    npm run build
 
-The built-in rules default to the Luxraj Blog hierarchy:
+Serve the generated _site directory with a local HTTP server, for example:
 
-| Source path | ID |
-| --- | --- |
-| `site/index.html` | `site-home-00` |
-| `site/pages/privacy.html` | `site-privacy-00` |
-| `site/categories/tech-news/tech-news-index.html` | `main-landing-technews-00` |
-| `site/categories/hardware/peripherals/hardware-peripherals-index.html` | `sub-landing-hardware-peripherals-00` |
-| `site/categories/engineering/drone-technology/articles/*.html` | `article-engineering-dronetechnology-01`, `02`, etc. |
+    python -m http.server 8000 --directory _site
 
-All generated naming components are normalized to lowercase alphanumeric tokens, so `drone-technology` becomes `dronetechnology`.
+Open http://localhost:8000/.
 
-Other repositories can use the default as a starting template, then configure their own folder mapping, HTML conventions, ID patterns, and numbering. Unmatched files are never assigned a guessed ID. Source files must already contain their configured Page ID meta element; the CMS intentionally does not inject missing structural elements.
+## GitHub Pages
 
-## Safety
+In Settings → Pages, choose GitHub Actions as the source. The workflow tests and builds on pushes to main and pull requests, and deploys successful main builds only. Manual workflow dispatch is supported. The generated _site directory is not committed.
 
-- The browser folder picker requests read/write access. Page ID writing requires a separately confirmed action.
-- Before writing, the selected CMS branch must match the actual checked-out local Git branch. Selecting a branch in the topbar **does not** switch the checkout; switch in VS Code instead.
-- Before applying a bulk preview, the CMS rescans existing IDs and checks the exact source text and generated IDs again. All planned source files are rechecked before any write.
-- If writing fails midway, the CMS attempts to restore earlier files and reports rollback failures. Multi-file operations are not filesystem-atomic; inspect source changes in Git after writing.
-- No Git commands, commits, pushes or deployments are performed by this CMS.
-- User-provided names and paths are inserted in the UI using DOM text nodes, not interpreted as HTML.
-- Profiles saved in IndexedDB are browser-local. Export JSON to preserve or transfer them.
+## Structure
 
-## Run locally
+- site/index.html — shell template
+- site/partials/ — common header, sidebar, footer
+- site/assets/ — shell CSS and JavaScript
+- site/applications/ — standalone application source
+- scripts/build-site.mjs — dependency-free static builder
+- tests/ — temporary-fixture build tests
+- .github/workflows/pages.yml — validation and deployment
 
-```bash
-python -m http.server 8000
-```
-
-Visit `http://localhost:8000` in Chrome or Edge on desktop, or serve the repository root with VS Code Live Server. HTTPS also works.
-
-## Tests
-
-```bash
-npm test
-```
-
-The test suite covers SEO eligibility, Luxraj patterns, custom numbering, duplicate protection, HTML edits, stale preview rejection and attempted rollback.
-
-## Project structure
-
-```text
-js/
-  app.js                         # workflow and navigation coordinator
-  modules/
-    file-tree.js                 # local HTML traversal and file handles
-    seo-eligibility.js           # enabled root SEO marker
-    page-discovery.js            # first dropdown eligible pages
-    page-id/
-      default-profile.js         # editable Luxraj defaults
-      reader.js                  # inspect and replace the Page ID meta content
-      pattern-engine.js          # path matching, captures and ID rendering
-      numbering-engine.js        # permanent sequence allocation
-      generator.js               # pure bulk plan and collision detection
-      validator.js               # profile, ID and match validation
-      workspace-scanner.js       # read all Page IDs, including unselected files
-      writer.js                  # local file preflight, write and recovery
-    pattern-studio/
-      profile-storage.js         # per-repository IndexedDB settings
-  ui/
-    page-id-selector.js          # second dropdown, manual editor and bulk preview
-    pattern-studio.js            # file map and editable rule interface
-```
+The shell deliberately contains no application-specific functionality.
